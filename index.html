@@ -1,0 +1,458 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洛谷题解审核助手</title>
+    <style>
+        /* ========== 全局基础 ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+        body { font-family: 'Segoe UI', 'Inter', system-ui, sans-serif; line-height: 1.5; padding: 24px 20px; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* ========== 主题变量 ========== */
+        body.light {
+            --bg-primary: #f8fafc; --bg-secondary: #ffffff; --bg-glass: rgba(255,255,255,0.7);
+            --text-primary: #0f172a; --text-secondary: #334155; --border: #e2e8f0;
+            --card-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.02);
+            --accent: #475569; --accent-hover: #334155; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+        }
+        body.dark {
+            --bg-primary: #0f172a; --bg-secondary: #1e293b; --bg-glass: rgba(30,41,59,0.8);
+            --text-primary: #f1f5f9; --text-secondary: #cbd5e1; --border: #334155;
+            --card-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            --accent: #b8963a; --accent-hover: #d4b86a; --danger: #f87171; --success: #34d399; --warning: #fbbf24;
+        }
+        body { background: var(--bg-primary); color: var(--text-primary); }
+
+        /* ========== 导航 ========== */
+        nav {
+            background: var(--bg-glass); backdrop-filter: blur(12px); border-radius: 0.375rem;
+            padding: 0.8rem 1.8rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap;
+            justify-content: center; align-items: center; gap: 1.2rem;
+            box-shadow: var(--card-shadow); border: 1px solid var(--border);
+        }
+        nav a, nav span {
+            text-decoration: none; font-weight: 500; padding: 0.4rem 0;
+            color: var(--text-primary); border-bottom: 2px solid transparent;
+        }
+        nav a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+
+        /* ========== 卡片 ========== */
+        .card {
+            background: var(--bg-secondary); border-radius: 0.375rem; padding: 1.2rem 1.5rem;
+            margin-bottom: 1rem; box-shadow: var(--card-shadow); border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.1); }
+
+        /* ========== 按钮 ========== */
+        button {
+            background: var(--accent); border: none; padding: 0.5rem 1.2rem;
+            border-radius: 0.375rem; font-weight: 500; font-size: 0.9rem;
+            color: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        button:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        button.danger { background: var(--danger); }
+        button.danger:hover { background: #dc2626; }
+
+        /* 深色按钮暗金流光 */
+        body.dark button:not(.danger):not(.theme-switch button) {
+            background: linear-gradient(135deg, #8a7228 0%, #b8963a 25%, #d4b86a 50%, #b8963a 75%, #8a7228 100%);
+            background-size: 300% 300%; color: #1a1a1a; border: 1px solid rgba(212,184,106,0.3);
+            animation: goldFlow 4s ease-in-out infinite; box-shadow: 0 2px 10px rgba(184,150,58,0.15);
+        }
+        body.dark button:not(.danger):not(.theme-switch button):hover {
+            background: linear-gradient(135deg, #b8963a 0%, #d4b86a 40%, #e8d090 60%, #d4b86a 80%, #b8963a 100%);
+            background-size: 300% 300%; box-shadow: 0 4px 20px rgba(184,150,58,0.35);
+            border-color: rgba(212,184,106,0.6);
+        }
+        @keyframes goldFlow {
+            0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+        }
+
+        /* ========== 输入 ========== */
+        textarea, input {
+            background: var(--bg-primary); border: 1px solid var(--border); border-radius: 0.25rem;
+            padding: 0.6rem 1rem; font-size: 0.9rem; color: var(--text-primary); outline: none;
+            width: 100%; transition: 0.2s;
+        }
+        textarea { min-height: 400px; resize: vertical; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; line-height: 1.6; }
+        textarea:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+
+        /* ========== 主题切换 ========== */
+        .theme-switch { display: flex; gap: 0.5rem; justify-content: flex-end; margin-bottom: 1rem; }
+        .theme-switch button {
+            background: var(--bg-secondary); color: var(--text-primary); padding: 0.3rem 0.8rem;
+            border: 1px solid var(--border); box-shadow: none;
+        }
+        .theme-switch button:hover { background: var(--accent); color: white; }
+
+        /* ========== 结果样式 ========== */
+        .result-item {
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+            display: flex; gap: 12px; align-items: flex-start;
+        }
+        .result-item:last-child { border-bottom: none; }
+        .result-badge {
+            flex-shrink: 0; padding: 2px 10px; border-radius: 12px;
+            font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .badge-pass { background: var(--success); color: #fff; }
+        .badge-warn { background: var(--warning); color: #1a1a1a; }
+        .badge-fail { background: var(--danger); color: #fff; }
+        .result-content { flex: 1; }
+        .result-title { font-weight: 600; font-size: 0.95rem; }
+        .result-desc { font-size: 0.9rem; color: var(--text-secondary); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+        .summary {
+            margin-top: 16px; padding: 12px 16px; background: var(--bg-primary);
+            border-radius: 8px; font-size: 0.9rem; border-left: 4px solid var(--accent);
+        }
+        .summary strong { color: var(--accent); }
+
+        /* ========== 布局 ========== */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        .flex { display: flex; gap: 10px; flex-wrap: wrap; }
+        .mt-2 { margin-top: 12px; }
+        .text-muted { color: var(--text-secondary); font-size: 0.85rem; }
+        footer { margin-top:30px; border-top:1px solid var(--border); padding-top:16px; text-align:center; color:var(--text-secondary); font-size:0.85rem; }
+        footer a { color: var(--accent); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body class="light">
+<div class="container">
+    <div class="theme-switch">
+        <button onclick="setTheme('light')">浅色</button>
+        <button onclick="setTheme('dark')">深色</button>
+    </div>
+    <nav>
+        <span>洛谷题解审核助手</span>
+        <a href="https://help.luogu.com.cn/rules/academic/solution-standard" target="_blank">查看规范原文</a>
+    </nav>
+
+    <div class="grid-2">
+        <div class="card">
+            <h2 style="margin-bottom:12px;">粘贴题解内容</h2>
+            <textarea id="inputText" placeholder="将题解全文粘贴至此，点击「开始审核」……"></textarea>
+            <div class="flex mt-2">
+                <button id="checkBtn">开始审核</button>
+                <button id="clearBtn" class="danger">清空</button>
+                <button id="loadSample">加载示例</button>
+            </div>
+            <div class="text-muted mt-2">快捷键 Ctrl+Enter 快速审核</div>
+        </div>
+        <div class="card">
+            <h2 style="margin-bottom:12px;">审核结果</h2>
+            <div id="resultArea" style="max-height:500px;overflow-y:auto;">
+                <div style="color:var(--text-secondary); text-align:center; padding:40px 0;">等待审核……</div>
+            </div>
+            <div id="summaryBox" class="summary"><strong>状态：</strong> 尚未检查</div>
+        </div>
+    </div>
+
+    <footer>
+        部署于 GitHub Pages · 仅供辅助审核，最终以管理员判断为准 ·
+        <a href="https://help.luogu.com.cn/rules/academic/solution-standard" target="_blank">洛谷主题库题解规范</a>
+    </footer>
+</div>
+
+<script>
+    (function() {
+        "use strict";
+
+        // ---------- 预处理 ----------
+        function preprocess(text, forVariableCheck) {
+            var cleaned = text.replace(/```[\s\S]*?```/g, '')
+                              .replace(/`[^`]*`/g, '')
+                              .replace(/\$\$[\s\S]*?\$\$/g, '');
+            cleaned = cleaned.replace(/~~([^~]*)~~/g, '');
+            if (forVariableCheck) {
+                // 移除所有标题行（以 # 开头），减少误报
+                cleaned = cleaned.replace(/^#+.*$/gm, '');
+            }
+            return cleaned;
+        }
+
+        // ---------- 核心检查 ----------
+        function runChecks(rawText) {
+            var results = [];
+            var passCount = 0, failCount = 0, warnCount = 0;
+
+            function addResult(type, title, desc) {
+                results.push({ type: type, title: title, desc: desc });
+                if (type === 'pass') passCount++;
+                else if (type === 'fail') failCount++;
+                else if (type === 'warn') warnCount++;
+            }
+
+            var clean = preprocess(rawText, false);
+            var cleanForVar = preprocess(rawText, true);
+
+            // 1. 全角标点
+            (function() {
+                var found = clean.match(/[，。！？；：“”‘’（）【】《》……—～]/g);
+                if (found) addResult('pass', '全角标点使用', '检测到全角中文标点，符合规范。');
+                else addResult('warn', '全角标点建议', '未检测到全角中文标点（，。！？等），题解中应使用全角标点。');
+            })();
+
+            // 2. 句号（跳过标题、列表、引导语、分隔线）
+            (function() {
+                var lines = clean.split(/\n+/).filter(function(p) { return p.trim().length > 0; });
+                var missing = 0;
+                for (var i = 0; i < lines.length; i++) {
+                    var trimmed = lines[i].trim();
+                    // 跳过标题（任意#开头）
+                    if (/^#+\s/.test(trimmed)) continue;
+                    // 跳过无序列表
+                    if (/^[-*+]\s/.test(trimmed)) continue;
+                    // 跳过有序列表
+                    if (/^\d+\.\s/.test(trimmed)) continue;
+                    // 跳过分隔线（如 ---）
+                    if (/^---+$/.test(trimmed)) continue;
+                    // 跳过以冒号或引导词结尾的行（如"令"、"为"、"如下"）
+                    if (/：$/.test(trimmed)) continue;
+                    if (/[令为如下]$/.test(trimmed)) continue;
+                    // 检查是否以句号/问号/感叹号/省略号结尾
+                    if (!/[。！？…]$/.test(trimmed)) {
+                        missing++;
+                    }
+                }
+                if (missing === 0) {
+                    addResult('pass', '句号结尾', '所有自然段落均以句号或合理引导语结尾。');
+                } else {
+                    addResult('fail', '缺少句号', missing + ' 个自然段落结尾缺少句号（。！？等）。建议每个完整句子都以句号结束。');
+                }
+            })();
+
+            // 3. 中英/公式间空格
+            (function() {
+                var p1 = /([\u4e00-\u9fa5])([a-zA-Z0-9$])/g;
+                var p2 = /([a-zA-Z0-9$])([\u4e00-\u9fa5])/g;
+                var errors = [], m;
+                while ((m = p1.exec(clean)) !== null) errors.push('"' + m[0] + '"');
+                while ((m = p2.exec(clean)) !== null) errors.push('"' + m[0] + '"');
+                if (errors.length === 0) {
+                    addResult('pass', '中英/公式间空格', '中文字符与英文/数字/公式之间均包含半角空格。');
+                } else {
+                    addResult('fail', '缺少空格', '检测到 ' + errors.length + ' 处中文字符与英文/数字/公式之间缺少空格。示例：' + errors.slice(0,5).join('；') + '。');
+                }
+            })();
+
+            // 4. 标点与英文/数字/公式间不应有空格
+            (function() {
+                var pattern = /([，。！？；：”、）】》])\s+([a-zA-Z0-9$])/g;
+                var errors = [], m;
+                while ((m = pattern.exec(clean)) !== null) errors.push('"' + m[0] + '"');
+                if (errors.length === 0) {
+                    addResult('pass', '标点与英文间距', '中文标点后未出现多余空格。');
+                } else {
+                    addResult('fail', '多余空格', '检测到 ' + errors.length + ' 处中文标点后带有空格，应删除。示例：' + errors.slice(0,3).join('；') + '。');
+                }
+            })();
+
+            // 5. LaTeX 变量包裹（只保留基本C++关键字和常见介词，无特殊单词）
+            (function() {
+                // 只保留最必要的忽略列表
+                var keywords = [
+                    'if','for','while','int','long','double','char','return','void','const','static','define','include',
+                    'unsigned','signed','short','float','bool','auto','register','sizeof','typedef','enum','union',
+                    'struct','class','public','private','protected','virtual','friend','inline','template','typename',
+                    'vector','map','set','queue','stack','deque','pair','string','iostream','algorithm',
+                    'cstdio','cstring','cmath','bits','std','using','namespace','main','cin','cout','endl',
+                    'ios','sync_with_stdio','tie','T'
+                ];
+                // 常见介词/代词
+                var commonWords = ['is','are','am','was','were','be','been','being','have','has','had','do','does','did',
+                                   'will','would','should','could','may','might','must','can','shall','to','of','for',
+                                   'with','on','at','by','in','from','up','off','over','under','etc','eg','ie','the','an','a'];
+                var varPattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
+                var match, errors = [];
+                while ((match = varPattern.exec(cleanForVar)) !== null) {
+                    var word = match[1];
+                    if (keywords.indexOf(word) !== -1) continue;
+                    if (commonWords.indexOf(word.toLowerCase()) !== -1) continue;
+                    // 检查是否在$中
+                    var start = match.index, end = start + word.length;
+                    var before = cleanForVar.substring(0, start);
+                    var after = cleanForVar.substring(end);
+                    var lastDollar = before.lastIndexOf('$');
+                    var nextDollar = after.indexOf('$');
+                    if (lastDollar !== -1 && nextDollar !== -1 && before.lastIndexOf('$') > before.lastIndexOf('`')) continue;
+                    var prevChar = cleanForVar[start-1] || '';
+                    var nextChar = cleanForVar[end] || '';
+                    if (prevChar === '$' || nextChar === '$') continue;
+                    errors.push(word);
+                }
+                // 去重
+                var unique = [];
+                for (var i = 0; i < errors.length; i++) {
+                    if (unique.indexOf(errors[i]) === -1) unique.push(errors[i]);
+                }
+                if (unique.length === 0) {
+                    addResult('pass', 'LaTeX 变量包裹', '未发现裸变量（未用$包裹的数学变量）。');
+                } else {
+                    addResult('warn', '变量可能未用 $ 包裹', '检测到疑似裸变量：' + unique.slice(0,10).join(', ') + (unique.length>10?'...':'') + '。请确保所有数学符号/变量/常数都用 $ 包围。');
+                }
+            })();
+
+            // 6. 运算符建议
+            (function() {
+                var issues = [];
+                if (/\*\s*[a-zA-Z0-9$]/.test(clean)) issues.push('使用了 "*" 表示乘法，建议用 \\times');
+                if (/<[^=]/.test(clean)) issues.push('可能使用了 "<" 表示小于，建议用 \\le 或 \\lt（若严格小于）');
+                if (/\bmod\b/i.test(clean) && !/\\bmod/.test(clean)) issues.push('使用了 "mod"，建议用 \\bmod 表示取模');
+                if (issues.length === 0) addResult('pass', '运算符使用', '未发现明显的运算符不规范（*、<、mod等）。');
+                else addResult('warn', '运算符建议', issues.join('；'));
+            })();
+
+            // 7. 时间复杂度 O
+            (function() {
+                if (/O\s*\(/i.test(clean) && !/\$O\s*\(/.test(clean)) {
+                    addResult('warn', '时间复杂度格式', '复杂度 "O(...)" 应使用 $O(...)$ 包裹。');
+                } else {
+                    addResult('pass', '时间复杂度格式', '未发现裸 "O(...)"。');
+                }
+            })();
+
+            // 8. 标题层级
+            (function() {
+                var lines = rawText.split('\n');
+                var l1=0,l2=0,l3=0;
+                for (var i = 0; i < lines.length; i++) {
+                    var t = lines[i].trim();
+                    if (t.startsWith('# ')) l1++;
+                    else if (t.startsWith('## ')) l2++;
+                    else if (t.startsWith('### ') || t.startsWith('#### ')) l3++;
+                }
+                if (l1 > 1) addResult('warn', '标题层级', '检测到 ' + l1 + ' 个一级标题（#），建议最多一个。');
+                else if (l1 === 0 && l2 > 3) addResult('warn', '标题结构', '没有一级标题，但有很多二级标题，建议使用一级标题作为文章主标题。');
+                else addResult('pass', '标题结构', '标题层级使用合理。');
+            })();
+
+            // 9. 列表格式
+            (function() {
+                var lines = rawText.split('\n');
+                var issues = [];
+                for (var i = 0; i < lines.length; i++) {
+                    var t = lines[i].trim();
+                    if (/^\d+[\.)]/.test(t) && !/^\d+\.\s/.test(t)) {
+                        issues.push('列表项 "' + t + '" 格式不规范，应使用 "1. " 格式。');
+                    }
+                    if (/^[•·]/.test(t) && !/^[\-\*\+]\s/.test(t)) {
+                        issues.push('无序列表项 "' + t + '" 应使用 "- " 或 "* " 开头。');
+                    }
+                }
+                if (issues.length === 0) addResult('pass', '列表格式', '列表格式符合规范（无序用 -/*，有序用 1.）。');
+                else addResult('warn', '列表格式', issues.slice(0,3).join('；') + (issues.length>3?'...':''));
+            })();
+
+            // 10. 代码块
+            (function() {
+                if (rawText.includes('```')) addResult('pass', '代码块', '检测到代码块（```），格式正确。');
+                else addResult('warn', '代码块建议', '未发现代码块。如果题解包含代码，请用 ``` 包裹代码。');
+            })();
+
+            // 11. 禁用词
+            (function() {
+                var forbidden = ['蒟蒻', '第一篇题解', '求过', '求管理员', '点赞', '加戏', '吐槽', '闲聊', '第一次写'];
+                var found = [];
+                for (var i = 0; i < forbidden.length; i++) {
+                    if (clean.indexOf(forbidden[i]) !== -1) found.push(forbidden[i]);
+                }
+                if (found.length === 0) addResult('pass', '禁用词', '未检测到禁用词（闲聊、求过等）。');
+                else addResult('fail', '禁用词', '检测到禁用词：' + found.join('、') + '。请移除这些无关内容。');
+            })();
+
+            // 12. 链接格式
+            (function() {
+                var urlPattern = /https?:\/\/[^\s]+/g;
+                var matches = rawText.match(urlPattern);
+                if (matches) {
+                    var invalid = matches.filter(function(url) { return rawText.indexOf('](' + url + ')') === -1; });
+                    if (invalid.length > 0) {
+                        addResult('warn', '链接格式', '检测到裸链接：' + invalid.slice(0,3).join(' ') + '，应使用 [text](url) 格式。');
+                    } else {
+                        addResult('pass', '链接格式', '链接均使用 [text](url) 格式。');
+                    }
+                } else {
+                    addResult('pass', '链接格式', '未检测到链接或链接格式正确。');
+                }
+            })();
+
+            return { results: results, passCount: passCount, failCount: failCount, warnCount: warnCount };
+        }
+
+        // ---------- UI ----------
+        var inputText = document.getElementById('inputText');
+        var checkBtn = document.getElementById('checkBtn');
+        var clearBtn = document.getElementById('clearBtn');
+        var loadSample = document.getElementById('loadSample');
+        var resultArea = document.getElementById('resultArea');
+        var summaryBox = document.getElementById('summaryBox');
+
+        function renderResults(resultObj) {
+            var results = resultObj.results;
+            var passCount = resultObj.passCount;
+            var failCount = resultObj.failCount;
+            var warnCount = resultObj.warnCount;
+            var html = '';
+            for (var i = 0; i < results.length; i++) {
+                var r = results[i];
+                var badgeClass = 'badge-pass', label = '通过';
+                if (r.type === 'fail') { badgeClass = 'badge-fail'; label = '不合格'; }
+                else if (r.type === 'warn') { badgeClass = 'badge-warn'; label = '警告'; }
+                html += '<div class="result-item">' +
+                        '<span class="result-badge ' + badgeClass + '">' + label + '</span>' +
+                        '<div class="result-content">' +
+                        '<div class="result-title">' + r.title + '</div>' +
+                        '<div class="result-desc">' + r.desc + '</div>' +
+                        '</div></div>';
+            }
+            if (results.length === 0) html = '<div style="color:var(--text-secondary); text-align:center; padding:20px;">没有检查结果</div>';
+            resultArea.innerHTML = html;
+
+            var total = passCount + failCount + warnCount;
+            var status = '全部通过', color = 'var(--success)';
+            if (failCount > 0) { status = '存在不合格项'; color = 'var(--danger)'; }
+            else if (warnCount > 0) { status = '存在警告项（建议修改）'; color = 'var(--warning)'; }
+            summaryBox.innerHTML = '<strong>状态：</strong> <span style="color:' + color + ';">' + status + '</span>' +
+                '&nbsp;|&nbsp; 通过 ' + passCount + ' &nbsp; 不合格 ' + failCount + ' &nbsp; 警告 ' + warnCount + ' &nbsp; 总计 ' + total + ' 项' +
+                (failCount === 0 && warnCount === 0 ? ' 优秀！' : '');
+        }
+
+        function performCheck() {
+            var text = inputText.value;
+            if (text.trim().length === 0) {
+                resultArea.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:20px;">请输入题解内容。</div>';
+                summaryBox.innerHTML = '<strong>状态：</strong> 无内容';
+                return;
+            }
+            var result = runChecks(text);
+            renderResults(result);
+        }
+
+        checkBtn.addEventListener('click', performCheck);
+        clearBtn.addEventListener('click', function() {
+            inputText.value = '';
+            resultArea.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:40px 0;">等待审核……</div>';
+            summaryBox.innerHTML = '<strong>状态：</strong> 尚未检查';
+        });
+        loadSample.addEventListener('click', function() {
+            var sample = '### 题目分析\n\n本题考虑使用 Dijkstra 算法，先进行 DFS 操作预处理。\n\n在第 2 日，Aya 吃掉了 $n$ 盘菜，每盘 $15$ 元。\n\n如果要输出 `Luogu`，应该写成 `cout << "Luogu";`\n\n首先进行 $dfs$ 操作，复杂度为 $O(\\min(\\log n, A))$。\n\n```cpp\n#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello" << endl;\n    return 0;\n}\n```\n\n**注意**：数据范围 $n \\le 10^5$，使用 $\\operatorname{lcm}$ 计算。';
+            inputText.value = sample;
+            performCheck();
+        });
+        inputText.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); performCheck(); }
+        });
+
+        window.setTheme = function(theme) {
+            document.body.className = theme;
+        };
+        document.body.className = 'light';
+    })();
+</script>
+</body>
+</html>
