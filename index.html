@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -169,7 +169,7 @@
                               .replace(/\$\$[\s\S]*?\$\$/g, '');
             cleaned = cleaned.replace(/~~([^~]*)~~/g, '');
             if (forVariableCheck) {
-                // 移除所有标题行（以 # 开头），减少误报
+                // 移除标题行
                 cleaned = cleaned.replace(/^#+.*$/gm, '');
             }
             return cleaned;
@@ -197,24 +197,25 @@
                 else addResult('warn', '全角标点建议', '未检测到全角中文标点（，。！？等），题解中应使用全角标点。');
             })();
 
-            // 2. 句号（跳过标题、列表、引导语、分隔线）
+            // 2. 句号（跳过标题、列表、引导语、分隔线、纯图片行）
             (function() {
                 var lines = clean.split(/\n+/).filter(function(p) { return p.trim().length > 0; });
                 var missing = 0;
                 for (var i = 0; i < lines.length; i++) {
                     var trimmed = lines[i].trim();
-                    // 跳过标题（任意#开头）
+                    // 跳过标题
                     if (/^#+\s/.test(trimmed)) continue;
-                    // 跳过无序列表
+                    // 跳过列表
                     if (/^[-*+]\s/.test(trimmed)) continue;
-                    // 跳过有序列表
                     if (/^\d+\.\s/.test(trimmed)) continue;
-                    // 跳过分隔线（如 ---）
+                    // 跳过分隔线
                     if (/^---+$/.test(trimmed)) continue;
-                    // 跳过以冒号或引导词结尾的行（如"令"、"为"、"如下"）
+                    // 跳过以冒号或引导词结尾的行
                     if (/：$/.test(trimmed)) continue;
                     if (/[令为如下]$/.test(trimmed)) continue;
-                    // 检查是否以句号/问号/感叹号/省略号结尾
+                    // 跳过整行仅为图片的（如 ![](url) 或 ![]()）
+                    if (/^!\[\]\([^)]*\)$/.test(trimmed)) continue;
+                    // 检查句号
                     if (!/[。！？…]$/.test(trimmed)) {
                         missing++;
                     }
@@ -252,9 +253,8 @@
                 }
             })();
 
-            // 5. LaTeX 变量包裹（只保留基本C++关键字和常见介词，无特殊单词）
+            // 5. LaTeX 变量包裹
             (function() {
-                // 只保留最必要的忽略列表
                 var keywords = [
                     'if','for','while','int','long','double','char','return','void','const','static','define','include',
                     'unsigned','signed','short','float','bool','auto','register','sizeof','typedef','enum','union',
@@ -263,7 +263,6 @@
                     'cstdio','cstring','cmath','bits','std','using','namespace','main','cin','cout','endl',
                     'ios','sync_with_stdio','tie','T'
                 ];
-                // 常见介词/代词
                 var commonWords = ['is','are','am','was','were','be','been','being','have','has','had','do','does','did',
                                    'will','would','should','could','may','might','must','can','shall','to','of','for',
                                    'with','on','at','by','in','from','up','off','over','under','etc','eg','ie','the','an','a'];
@@ -285,7 +284,6 @@
                     if (prevChar === '$' || nextChar === '$') continue;
                     errors.push(word);
                 }
-                // 去重
                 var unique = [];
                 for (var i = 0; i < errors.length; i++) {
                     if (unique.indexOf(errors[i]) === -1) unique.push(errors[i]);
@@ -365,12 +363,14 @@
                 else addResult('fail', '禁用词', '检测到禁用词：' + found.join('、') + '。请移除这些无关内容。');
             })();
 
-            // 12. 链接格式
+            // 12. 链接格式（忽略图片语法）
             (function() {
+                // 先移除所有 ![]() 图片，避免干扰
+                var noImages = rawText.replace(/!\[\]\([^)]*\)/g, '');
                 var urlPattern = /https?:\/\/[^\s]+/g;
-                var matches = rawText.match(urlPattern);
+                var matches = noImages.match(urlPattern);
                 if (matches) {
-                    var invalid = matches.filter(function(url) { return rawText.indexOf('](' + url + ')') === -1; });
+                    var invalid = matches.filter(function(url) { return noImages.indexOf('](' + url + ')') === -1; });
                     if (invalid.length > 0) {
                         addResult('warn', '链接格式', '检测到裸链接：' + invalid.slice(0,3).join(' ') + '，应使用 [text](url) 格式。');
                     } else {
@@ -440,7 +440,7 @@
             summaryBox.innerHTML = '<strong>状态：</strong> 尚未检查';
         });
         loadSample.addEventListener('click', function() {
-            var sample = '### 题目分析\n\n本题考虑使用 Dijkstra 算法，先进行 DFS 操作预处理。\n\n在第 2 日，Aya 吃掉了 $n$ 盘菜，每盘 $15$ 元。\n\n如果要输出 `Luogu`，应该写成 `cout << "Luogu";`\n\n首先进行 $dfs$ 操作，复杂度为 $O(\\min(\\log n, A))$。\n\n```cpp\n#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello" << endl;\n    return 0;\n}\n```\n\n**注意**：数据范围 $n \\le 10^5$，使用 $\\operatorname{lcm}$ 计算。';
+            var sample = '### 题目分析\n\n本题考虑使用 Dijkstra 算法，先进行 DFS 操作预处理。\n\n![](https://cdn.luogu.com.cn/upload/pic/22071.png)\n\n在第 2 日，Aya 吃掉了 $n$ 盘菜，每盘 $15$ 元。\n\n如果要输出 `Luogu`，应该写成 `cout << "Luogu";`\n\n首先进行 $dfs$ 操作，复杂度为 $O(\\min(\\log n, A))$。\n\n```cpp\n#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello" << endl;\n    return 0;\n}\n```\n\n**注意**：数据范围 $n \\le 10^5$，使用 $\\operatorname{lcm}$ 计算。';
             inputText.value = sample;
             performCheck();
         });
