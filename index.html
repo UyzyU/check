@@ -162,14 +162,20 @@
     (function() {
         "use strict";
 
-        // ---------- 预处理 ----------
+        // ---------- 预处理：移除代码块、行内代码、公式块、删除线、容器块（::::...） ----------
         function preprocess(text, forVariableCheck) {
-            var cleaned = text.replace(/```[\s\S]*?```/g, '')
-                              .replace(/`[^`]*`/g, '')
-                              .replace(/\$\$[\s\S]*?\$\$/g, '');
+            // 1. 移除标准代码块
+            var cleaned = text.replace(/```[\s\S]*?```/g, '');
+            // 2. 移除行内代码
+            cleaned = cleaned.replace(/`[^`]*`/g, '');
+            // 3. 移除独立公式块
+            cleaned = cleaned.replace(/\$\$[\s\S]*?\$\$/g, '');
+            // 4. 移除删除线
             cleaned = cleaned.replace(/~~([^~]*)~~/g, '');
+            // 5. 移除容器块：支持 ::::info、::::info[code]、::::warning[参数] 等形式，直到下一个 :::: 或结尾
+            cleaned = cleaned.replace(/::::[a-z]*\s*(?:\[[^\]]*\])?\s*[\s\S]*?(?=::::|$)/g, '');
+            // 如果用于变量检查，额外移除标题行
             if (forVariableCheck) {
-                // 移除标题行
                 cleaned = cleaned.replace(/^#+.*$/gm, '');
             }
             return cleaned;
@@ -190,14 +196,28 @@
             var clean = preprocess(rawText, false);
             var cleanForVar = preprocess(rawText, true);
 
-            // 1. 全角标点
+            // 1. 全角标点检测（已有）
             (function() {
                 var found = clean.match(/[，。！？；：“”‘’（）【】《》……—～]/g);
                 if (found) addResult('pass', '全角标点使用', '检测到全角中文标点，符合规范。');
                 else addResult('warn', '全角标点建议', '未检测到全角中文标点（，。！？等），题解中应使用全角标点。');
             })();
 
-            // 2. 句号（跳过标题、列表、引导语、分隔线、纯图片行）
+            // 2. 英文标点误用检测（仅检测中文文本中误用的半角标点，排除合理情况如数字、缩写）
+            (function() {
+                var pattern = /([\u4e00-\u9fa5])([,\.!?:;])([\u4e00-\u9fa5])/g;
+                var errors = [], m;
+                while ((m = pattern.exec(clean)) !== null) {
+                    errors.push('"' + m[0] + '"');
+                }
+                if (errors.length > 0) {
+                    addResult('warn', '英文标点误用', '检测到中文文本中使用了半角英文标点（,.!?:;），应使用全角中文标点（，。！？：；）。示例：' + errors.slice(0,3).join('、'));
+                } else {
+                    addResult('pass', '英文标点检查', '未发现中文文本中误用半角英文标点。');
+                }
+            })();
+
+            // 3. 句号（跳过标题、列表、引导语、分隔线、纯图片行、容器块内容已移除）
             (function() {
                 var lines = clean.split(/\n+/).filter(function(p) { return p.trim().length > 0; });
                 var missing = 0;
@@ -213,7 +233,7 @@
                     // 跳过以冒号或引导词结尾的行
                     if (/：$/.test(trimmed)) continue;
                     if (/[令为如下]$/.test(trimmed)) continue;
-                    // 跳过整行仅为图片的（如 ![](url) 或 ![]()）
+                    // 跳过整行仅为图片的
                     if (/^!\[\]\([^)]*\)$/.test(trimmed)) continue;
                     // 检查句号
                     if (!/[。！？…]$/.test(trimmed)) {
@@ -227,7 +247,7 @@
                 }
             })();
 
-            // 3. 中英/公式间空格
+            // 4. 中英/公式间空格（原有）
             (function() {
                 var p1 = /([\u4e00-\u9fa5])([a-zA-Z0-9$])/g;
                 var p2 = /([a-zA-Z0-9$])([\u4e00-\u9fa5])/g;
@@ -241,19 +261,22 @@
                 }
             })();
 
-            // 4. 标点与英文/数字/公式间不应有空格
+            // 5. 中文标点后多余空格（只检测半角空格，不包含换行/制表符）
             (function() {
-                var pattern = /([，。！？；：”、）】》])\s+([a-zA-Z0-9$])/g;
+                // 匹配全角标点后跟一个或多个半角空格
+                var pattern = /([，。！？；：”、）】》]) +/g;
                 var errors = [], m;
-                while ((m = pattern.exec(clean)) !== null) errors.push('"' + m[0] + '"');
+                while ((m = pattern.exec(clean)) !== null) {
+                    errors.push('"' + m[0] + '"');
+                }
                 if (errors.length === 0) {
-                    addResult('pass', '标点与英文间距', '中文标点后未出现多余空格。');
+                    addResult('pass', '标点后空格', '中文标点后未出现多余半角空格。');
                 } else {
-                    addResult('fail', '多余空格', '检测到 ' + errors.length + ' 处中文标点后带有空格，应删除。示例：' + errors.slice(0,3).join('；') + '。');
+                    addResult('fail', '标点后多余空格', '检测到 ' + errors.length + ' 处中文标点后带有半角空格（应为无空格）。示例：' + errors.slice(0,3).join('、'));
                 }
             })();
 
-            // 5. LaTeX 变量包裹
+            // 6. LaTeX 变量包裹（同前）
             (function() {
                 var keywords = [
                     'if','for','while','int','long','double','char','return','void','const','static','define','include',
@@ -272,7 +295,6 @@
                     var word = match[1];
                     if (keywords.indexOf(word) !== -1) continue;
                     if (commonWords.indexOf(word.toLowerCase()) !== -1) continue;
-                    // 检查是否在$中
                     var start = match.index, end = start + word.length;
                     var before = cleanForVar.substring(0, start);
                     var after = cleanForVar.substring(end);
@@ -295,7 +317,7 @@
                 }
             })();
 
-            // 6. 运算符建议
+            // 7. 运算符建议
             (function() {
                 var issues = [];
                 if (/\*\s*[a-zA-Z0-9$]/.test(clean)) issues.push('使用了 "*" 表示乘法，建议用 \\times');
@@ -305,7 +327,7 @@
                 else addResult('warn', '运算符建议', issues.join('；'));
             })();
 
-            // 7. 时间复杂度 O
+            // 8. 时间复杂度 O
             (function() {
                 if (/O\s*\(/i.test(clean) && !/\$O\s*\(/.test(clean)) {
                     addResult('warn', '时间复杂度格式', '复杂度 "O(...)" 应使用 $O(...)$ 包裹。');
@@ -314,7 +336,7 @@
                 }
             })();
 
-            // 8. 标题层级
+            // 9. 标题层级
             (function() {
                 var lines = rawText.split('\n');
                 var l1=0,l2=0,l3=0;
@@ -329,7 +351,7 @@
                 else addResult('pass', '标题结构', '标题层级使用合理。');
             })();
 
-            // 9. 列表格式
+            // 10. 列表格式
             (function() {
                 var lines = rawText.split('\n');
                 var issues = [];
@@ -346,13 +368,13 @@
                 else addResult('warn', '列表格式', issues.slice(0,3).join('；') + (issues.length>3?'...':''));
             })();
 
-            // 10. 代码块
+            // 11. 代码块
             (function() {
                 if (rawText.includes('```')) addResult('pass', '代码块', '检测到代码块（```），格式正确。');
                 else addResult('warn', '代码块建议', '未发现代码块。如果题解包含代码，请用 ``` 包裹代码。');
             })();
 
-            // 11. 禁用词
+            // 12. 禁用词
             (function() {
                 var forbidden = ['蒟蒻', '第一篇题解', '求过', '求管理员', '点赞', '加戏', '吐槽', '闲聊', '第一次写'];
                 var found = [];
@@ -363,9 +385,8 @@
                 else addResult('fail', '禁用词', '检测到禁用词：' + found.join('、') + '。请移除这些无关内容。');
             })();
 
-            // 12. 链接格式（忽略图片语法）
+            // 13. 链接格式（忽略图片）
             (function() {
-                // 先移除所有 ![]() 图片，避免干扰
                 var noImages = rawText.replace(/!\[\]\([^)]*\)/g, '');
                 var urlPattern = /https?:\/\/[^\s]+/g;
                 var matches = noImages.match(urlPattern);
@@ -440,7 +461,7 @@
             summaryBox.innerHTML = '<strong>状态：</strong> 尚未检查';
         });
         loadSample.addEventListener('click', function() {
-            var sample = '### 题目分析\n\n本题考虑使用 Dijkstra 算法，先进行 DFS 操作预处理。\n\n![](https://cdn.luogu.com.cn/upload/pic/22071.png)\n\n在第 2 日，Aya 吃掉了 $n$ 盘菜，每盘 $15$ 元。\n\n如果要输出 `Luogu`，应该写成 `cout << "Luogu";`\n\n首先进行 $dfs$ 操作，复杂度为 $O(\\min(\\log n, A))$。\n\n```cpp\n#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello" << endl;\n    return 0;\n}\n```\n\n**注意**：数据范围 $n \\le 10^5$，使用 $\\operatorname{lcm}$ 计算。';
+            var sample = '### 题目分析\n\n本题考虑使用 Dijkstra 算法，先进行 DFS 操作预处理。\n\n![](https://cdn.luogu.com.cn/upload/pic/22071.png)\n\n在第 2 日，Aya 吃掉了 $n$ 盘菜，每盘 $15$ 元。\n\n如果要输出 `Luogu`，应该写成 `cout << "Luogu";`\n\n首先进行 $dfs$ 操作，复杂度为 $O(\\min(\\log n, A))$。\n\n```cpp\n#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello" << endl;\n    return 0;\n}\n```\n\n**注意**：数据范围 $n \\le 10^5$，使用 $\\operatorname{lcm}$ 计算。\n\n::::info[code]\n这是一个提示信息。\n可以包含多行内容。\n::::';
             inputText.value = sample;
             performCheck();
         });
